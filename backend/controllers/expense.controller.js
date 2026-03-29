@@ -1,5 +1,7 @@
 const { Expense, ApprovalLevel, User, Company } = require('../models');
 const { validationResult } = require('express-validator');
+const { convertCurrency } = require('../services/currency.service');
+const { processReceiptFile, validateReceiptData } = require('../services/ocr.service');
 
 // @desc    Create a new expense
 // @route   POST /api/expenses
@@ -418,3 +420,76 @@ async function getApproversForExpense(employeeId, totalLevels) {
 
   return approvers;
 }
+
+// @desc    Upload receipt for OCR scanning
+// @route   POST /api/expenses/:id/receipt
+// @access  Private (Employee)
+exports.uploadReceipt = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    // Process receipt with OCR
+    const ocrResult = await processReceiptFile(req.file);
+
+    if (!ocrResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: ocrResult.error || 'OCR processing failed',
+      });
+    }
+
+    // Validate extracted data
+    const validation = validateReceiptData(ocrResult.data);
+
+    res.json({
+      success: true,
+      message: 'Receipt processed successfully',
+      data: {
+        ...ocrResult,
+        validation,
+      },
+    });
+  } catch (error) {
+    console.error('Upload receipt error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing receipt',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Convert currency amount
+// @route   POST /api/expenses/convert-currency
+// @access  Private
+exports.convertCurrencyAmount = async (req, res) => {
+  try {
+    const { amount, from, to } = req.body;
+
+    if (!amount || !from || !to) {
+      return res.status(400).json({
+        success: false,
+        message: 'Amount, from currency, and to currency are required',
+      });
+    }
+
+    const result = await convertCurrency(amount, from, to);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error('Currency conversion error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error converting currency',
+      error: error.message,
+    });
+  }
+};
