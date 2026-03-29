@@ -195,14 +195,6 @@ Odoo_hackathon-
 - Body: Inter Regular
 - Monospace: Fira Code
 
-## 🤝 Contributing
-
-This is a hackathon project. Team members should:
-1. Create feature branches from main
-2. Commit their own work regularly
-3. Use meaningful commit messages
-4. Push changes and create pull requests
-
 ## 📄 License
 
 MIT License - This is a hackathon project for educational purposes.
