@@ -108,10 +108,14 @@ The frontend will run on `http://localhost:5173`
 - Real-time currency conversion API
 - OCR receipt scanning
 
-### Member 3 - Approval Workflow
-- Sequential + conditional approval engine
-- Real-time status updates
-- Dashboard views
+### Member 3 - Approval Workflow ✅ COMPLETED
+- ✅ Sequential + conditional approval engine
+- ✅ Real-time status updates
+- ✅ Dashboard views for all roles (Employee, Manager, Admin)
+- ✅ Multi-level approval workflow (1-3 levels based on amount)
+- ✅ Complete approval history tracking
+- ✅ Notification system with polling support
+- 📁 See: `backend/MEMBER3_README.md`
 
 ### Member 4 - UI/UX + Admin Panel
 - Responsive layout
