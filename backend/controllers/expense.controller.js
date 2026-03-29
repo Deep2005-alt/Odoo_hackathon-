@@ -1,5 +1,7 @@
 const { Expense, ApprovalLevel, User, Company } = require('../models');
 const { validationResult } = require('express-validator');
+const Tesseract = require('tesseract.js');
+const fs = require('fs');
 
 // @desc    Create a new expense
 // @route   POST /api/expenses
@@ -50,6 +52,108 @@ exports.createExpense = async (req, res) => {
       message: 'Error creating expense',
       error: error.message,
     });
+  }
+};
+
+// @desc    Get all expenses for current user
+// @route   GET /api/expenses
+// @access  Private
+exports.getExpenses = async (req, res) => {
+  try {
+    const expenses = await Expense.findAll({
+      where: {
+        employee_id: req.user.userId,
+      },
+      order: [['expense_date', 'DESC'], ['createdAt', 'DESC']],
+    });
+
+    res.json({
+      success: true,
+      count: expenses.length,
+      data: { expenses },
+    });
+  } catch (error) {
+    console.error('Get expenses error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching expenses',
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Update draft expense
+// @route   PUT /api/expenses/:id
+// @access  Private
+exports.updateExpenseDraft = async (req, res) => {
+  try {
+    const expense = await Expense.findOne({
+      where: { id: req.params.id, employee_id: req.user.userId }
+    });
+
+    if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
+    if (expense.status !== 'pending') return res.status(400).json({ success: false, message: 'Only pending expenses can be edited' });
+
+    const updates = req.body;
+    // Base amount recalculation logic to be added in frontend or here if currency changed
+    if (updates.amount) updates.converted_amount = updates.amount; 
+
+    await expense.update(updates);
+    res.json({ success: true, message: 'Expense updated', data: { expense } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error updating expense', error: error.message });
+  }
+};
+
+// @desc    Delete draft expense
+// @route   DELETE /api/expenses/:id
+// @access  Private
+exports.deleteExpenseDraft = async (req, res) => {
+  try {
+    const expense = await Expense.findOne({
+      where: { id: req.params.id, employee_id: req.user.userId }
+    });
+
+    if (!expense) return res.status(404).json({ success: false, message: 'Expense not found' });
+    if (expense.status !== 'pending') return res.status(400).json({ success: false, message: 'Only pending expenses can be deleted' });
+
+    await expense.destroy();
+    res.json({ success: true, message: 'Expense deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error deleting expense', error: error.message });
+  }
+};
+
+// @desc    Perform OCR on receipt
+// @route   POST /api/expenses/ocr
+// @access  Private
+exports.uploadReceiptOCR = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No receipt file uploaded' });
+    }
+
+    const imagePath = req.file.path;
+    const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
+    
+    // Naive regex to grab Date, Amount, etc. More robust logic can be added later
+    const amountMatch = text.match(/\$?\s*([0-9]+[.,][0-9]{2})/);
+    const dateMatch = text.match(/([0-9]{1,2}[-/][0-9]{1,2}[-/][0-9]{2,4})/);
+
+    let extractedData = {
+      raw_text: text,
+      extracted_amount: amountMatch ? amountMatch[1] : null,
+      extracted_date: dateMatch ? dateMatch[1] : null,
+      receipt_url: '/uploads/' + req.file.filename
+    };
+
+    res.json({
+      success: true,
+      data: extractedData
+    });
+  } catch (error) {
+    console.error('OCR Error:', error);
+    res.status(500).json({ success: false, message: 'Error processing OCR', error: error.message });
   }
 };
 

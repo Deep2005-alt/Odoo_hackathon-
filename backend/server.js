@@ -23,11 +23,14 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+const path = require('path');
 app.use(helmet()); // Security headers
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // Allow images
 app.use(cors()); // Enable CORS
 app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
