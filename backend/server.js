@@ -75,6 +75,11 @@ const startServer = async () => {
     await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
     console.log('✅ Database models synchronized.');
 
+    const { User, Company } = require('./models');
+    await Company.findOrCreate({ where: { id: 1 }, defaults: { name: 'Hackathon Company' } });
+    await User.findOrCreate({ where: { id: 1 }, defaults: { name: 'Test User', email: 'test@example.com', role: 'employee', company_id: 1 } });
+    console.log('✅ Dummy user seeded.');
+
     // Start server
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

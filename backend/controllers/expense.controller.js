@@ -2,6 +2,7 @@ const { Expense, ApprovalLevel, User, Company } = require('../models');
 const { validationResult } = require('express-validator');
 const Tesseract = require('tesseract.js');
 const fs = require('fs');
+const path = require('path');
 
 // @desc    Create a new expense
 // @route   POST /api/expenses
@@ -134,7 +135,11 @@ exports.uploadReceiptOCR = async (req, res) => {
     }
 
     const imagePath = req.file.path;
-    const { data: { text } } = await Tesseract.recognize(imagePath, 'eng');
+    const { data: { text } } = await Tesseract.recognize(imagePath, 'eng', {
+      logger: m => console.log(m),
+      langPath: path.join(__dirname, '..'), // User supplied backend/eng.traineddata
+      cachePath: path.join(__dirname, '..')
+    });
     
     // Naive regex to grab Date, Amount, etc. More robust logic can be added later
     const amountMatch = text.match(/\$?\s*([0-9]+[.,][0-9]{2})/);
